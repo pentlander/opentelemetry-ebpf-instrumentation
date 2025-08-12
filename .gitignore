@@ -1,9 +1,6 @@
 # Binaries for programs and plugins
 *.exe
 *.exe~
-*.dll
-*.so
-*.dylib
 
 .DS_Store
 
@@ -87,8 +84,5 @@ test/integration/components/pythonserver/lib64
 test/integration/components/pythonserver/pyvenv.cfg
 test/integration/components/gosql/qosql
 test/integration/components/testserver_1.17/vendor/*
-*_bpfel.go
-*_bpfel.o
-pkg/components/otelsdk/grafana-opentelemetry-java.jar
 opentelemetry-ebpf-instrumentation.sln
 obi.sln
