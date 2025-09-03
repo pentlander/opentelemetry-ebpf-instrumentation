@@ -54,6 +54,14 @@ type ProcessAttrs struct {
 	processAge     time.Duration
 }
 
+func (p *ProcessAttrs) Pid() PID {
+	return p.pid
+}
+
+func (p *ProcessAttrs) Metadata() map[string]string {
+	return p.metadata
+}
+
 func wplog() *slog.Logger {
 	return slog.With("component", "discover.ProcessWatcher")
 }
