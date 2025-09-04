@@ -146,7 +146,7 @@ func (wk *watcherKubeEnricher) enrichProcessEvent(processEvents []Event[ProcessA
 	for _, procEvent := range processEvents {
 		switch procEvent.Type {
 		case EventCreated:
-			wk.log.Debug("new process", "pid", procEvent.Obj.pid)
+			wk.log.Debug("new process", "pid", procEvent.Obj.Pid)
 			if procWithMeta, ok := wk.onNewProcess(procEvent.Obj); ok {
 				eventsWithMeta = append(eventsWithMeta, Event[ProcessAttrs]{
 					Type: EventCreated,
@@ -154,7 +154,7 @@ func (wk *watcherKubeEnricher) enrichProcessEvent(processEvents []Event[ProcessA
 				})
 			}
 		case EventDeleted:
-			wk.log.Debug("process stopped", "pid", procEvent.Obj.pid)
+			wk.log.Debug("process stopped", "pid", procEvent.Obj.Pid)
 			wk.onProcessTerminate(procEvent.Obj)
 			// no need to decorate deleted processes
 			eventsWithMeta = append(eventsWithMeta, procEvent)
@@ -171,19 +171,19 @@ func (wk *watcherKubeEnricher) onNewProcess(procInfo ProcessAttrs) (ProcessAttrs
 	defer wk.mt.Unlock()
 	// 1. get container owning the process and cache it
 	// 2. if there is already a pod registered for that container, decorate processAttrs with pod attributes
-	containerInfo, err := wk.getContainerInfo(procInfo.pid)
+	containerInfo, err := wk.getContainerInfo(procInfo.Pid)
 	if err != nil {
 		// it is expected for any process not running inside a container
-		wk.log.Debug("can't get container info for PID", "pid", procInfo.pid, "error", err)
+		wk.log.Debug("can't get container info for PID", "pid", procInfo.Pid, "error", err)
 		return ProcessAttrs{}, false
 	}
 
-	wk.log.Debug("found container info for process", "pid", procInfo.pid, "container", containerInfo.ContainerID)
+	wk.log.Debug("found container info for process", "pid", procInfo.Pid, "container", containerInfo.ContainerID)
 
 	wk.processByContainer[containerInfo.ContainerID] = append(wk.processByContainer[containerInfo.ContainerID], procInfo)
 
 	if pod := wk.store.PodByContainerID(containerInfo.ContainerID); pod != nil {
-		wk.log.Debug("matched process with running container", "pid", procInfo.pid, "container", containerInfo.ContainerID)
+		wk.log.Debug("matched process with running container", "pid", procInfo.Pid, "container", containerInfo.ContainerID)
 		procInfo = withMetadata(procInfo, pod.Meta)
 	}
 	return procInfo, true
@@ -193,16 +193,16 @@ func (wk *watcherKubeEnricher) onProcessTerminate(procInfo ProcessAttrs) {
 	wk.mt.Lock()
 	defer wk.mt.Unlock()
 
-	if cnt, ok := wk.containerByPID[procInfo.pid]; ok {
+	if cnt, ok := wk.containerByPID[procInfo.Pid]; ok {
 		if pidProcInfos, ok := wk.processByContainer[cnt.ContainerID]; ok {
 			filtered := []ProcessAttrs{}
 
 			for _, pidProcInfo := range pidProcInfos {
-				if pidProcInfo.pid != procInfo.pid {
+				if pidProcInfo.Pid != procInfo.Pid {
 					filtered = append(filtered, pidProcInfo)
 					continue
 				}
-				wk.log.Debug("removing process mapping", "container", cnt.ContainerID, "pid", pidProcInfo.pid)
+				wk.log.Debug("removing process mapping", "container", cnt.ContainerID, "pid", pidProcInfo.Pid)
 			}
 			if len(filtered) == 0 {
 				delete(wk.processByContainer, cnt.ContainerID)
@@ -211,8 +211,8 @@ func (wk *watcherKubeEnricher) onProcessTerminate(procInfo ProcessAttrs) {
 			}
 		}
 	}
-	delete(wk.containerByPID, procInfo.pid)
-	wk.store.DeleteProcess(uint32(procInfo.pid))
+	delete(wk.containerByPID, procInfo.Pid)
+	wk.store.DeleteProcess(uint32(procInfo.Pid))
 }
 
 func (wk *watcherKubeEnricher) onNewPod(pod *informer.ObjectMeta) []Event[ProcessAttrs] {
@@ -223,7 +223,7 @@ func (wk *watcherKubeEnricher) onNewPod(pod *informer.ObjectMeta) []Event[Proces
 		wk.log.Debug("looking up running process for pod container", "container", cnt.Id)
 		if procInfos, ok := wk.processByContainer[cnt.Id]; ok {
 			for _, procInfo := range procInfos {
-				wk.log.Debug("matched pod with running process", "container", cnt.Id, "pid", procInfo.pid)
+				wk.log.Debug("matched pod with running process", "container", cnt.Id, "pid", procInfo.Pid)
 				events = append(events, Event[ProcessAttrs]{
 					Type: EventCreated,
 					Obj:  withMetadata(procInfo, pod),
@@ -240,7 +240,7 @@ func (wk *watcherKubeEnricher) onDeletedPod(pod *informer.ObjectMeta) {
 	for _, cnt := range pod.Pod.Containers {
 		if pbcs, ok := wk.processByContainer[cnt.Id]; ok {
 			for _, pbc := range pbcs {
-				delete(wk.containerByPID, pbc.pid)
+				delete(wk.containerByPID, pbc.Pid)
 			}
 		}
 		delete(wk.processByContainer, cnt.Id)
@@ -267,17 +267,17 @@ func withMetadata(pp ProcessAttrs, info *informer.ObjectMeta) ProcessAttrs {
 	}
 
 	ret := pp
-	ret.metadata = map[string]string{
+	ret.Metadata = map[string]string{
 		services.AttrNamespace: info.Namespace,
 		services.AttrPodName:   info.Name,
 		services.AttrOwnerName: ownerName,
 	}
-	ret.podLabels = info.Labels
-	ret.podAnnotations = info.Annotations
+	ret.PodLabels = info.Labels
+	ret.PodAnnotations = info.Annotations
 
 	// add any other owner name (they might be several, e.g. replicaset and deployment)
 	for _, owner := range info.Pod.Owners {
-		ret.metadata[transform.OwnerLabelName(owner.Kind).Prom()] = owner.Name
+		ret.Metadata[transform.OwnerLabelName(owner.Kind).Prom()] = owner.Name
 	}
 	return ret
 }

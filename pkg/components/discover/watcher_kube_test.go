@@ -103,16 +103,16 @@ func TestWatcherKubeEnricher(t *testing.T) {
 			require.Len(t, events, 1)
 			event := events[0]
 			assert.Equal(t, EventCreated, event.Type)
-			assert.EqualValues(t, containerPID, event.Obj.pid)
-			assert.Equal(t, []uint32{containerPort}, event.Obj.openPorts)
-			assert.Equal(t, namespace, event.Obj.metadata[services.AttrNamespace])
-			assert.Equal(t, podName, event.Obj.metadata[services.AttrPodName])
+			assert.EqualValues(t, containerPID, event.Obj.Pid)
+			assert.Equal(t, []uint32{containerPort}, event.Obj.OpenPorts)
+			assert.Equal(t, namespace, event.Obj.Metadata[services.AttrNamespace])
+			assert.Equal(t, podName, event.Obj.Metadata[services.AttrPodName])
 			if strings.Contains(tc.name, "(no owner)") {
-				assert.Empty(t, event.Obj.metadata[services.AttrReplicaSetName])
-				assert.Empty(t, event.Obj.metadata[services.AttrDeploymentName])
+				assert.Empty(t, event.Obj.Metadata[services.AttrReplicaSetName])
+				assert.Empty(t, event.Obj.Metadata[services.AttrDeploymentName])
 			} else {
-				assert.Equal(t, replicaSetName, event.Obj.metadata[services.AttrReplicaSetName])
-				assert.Equal(t, deploymentName, event.Obj.metadata[services.AttrDeploymentName])
+				assert.Equal(t, replicaSetName, event.Obj.Metadata[services.AttrReplicaSetName])
+				assert.Equal(t, deploymentName, event.Obj.Metadata[services.AttrDeploymentName])
 			}
 		})
 	}
@@ -232,17 +232,17 @@ func TestWatcherKubeEnricherWithMatcher(t *testing.T) {
 
 	t.Run("process deletion", func(t *testing.T) {
 		inputQueue.Send([]Event[ProcessAttrs]{
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 123}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 456}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 789}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 1011}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 12}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 34}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 42}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 43}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 44}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 45}},
-			{Type: EventDeleted, Obj: ProcessAttrs{pid: 56}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 123}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 456}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 789}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 1011}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 12}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 34}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 42}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 43}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 44}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 45}},
+			{Type: EventDeleted, Obj: ProcessAttrs{Pid: 56}},
 		})
 		// only forwards the deletion of the processes that were already matched
 		matches := testutil.ReadChannel(t, outputCh, timeout)
@@ -294,8 +294,8 @@ func TestWatcherKubeEnricherWithMultiPIDContainers(t *testing.T) {
 
 	// Send two PID event, there will be no container information for them yet
 	wk.enrichProcessEvent([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1}},
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 2}},
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1}},
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 2}},
 	})
 
 	events := testutil.ReadChannel(t, outputCh, timeout)
@@ -305,7 +305,7 @@ func TestWatcherKubeEnricherWithMultiPIDContainers(t *testing.T) {
 	// Ensure we didn't add any container properties to these events, they should be as they were sent, not
 	// enriched
 	for _, event := range events {
-		assert.Equal(t, Event[ProcessAttrs]{Type: EventCreated, Obj: ProcessAttrs{pid: event.Obj.pid}}, event)
+		assert.Equal(t, Event[ProcessAttrs]{Type: EventCreated, Obj: ProcessAttrs{Pid: event.Obj.Pid}}, event)
 	}
 
 	podEvent := &informer.ObjectMeta{
@@ -327,17 +327,17 @@ func TestWatcherKubeEnricherWithMultiPIDContainers(t *testing.T) {
 		assert.Equal(t, Event[ProcessAttrs]{
 			Type: EventCreated,
 			Obj: ProcessAttrs{
-				pid: event.Obj.pid,
-				metadata: map[string]string{
+				Pid: event.Obj.Pid,
+				Metadata: map[string]string{
 					"k8s_namespace":  "test-ns",
 					"k8s_owner_name": "myservice",
 					"k8s_pod_name":   "myservice",
 				},
-				podLabels: map[string]string{
+				PodLabels: map[string]string{
 					"instrument": "ebpf",
 					"lang":       "golang",
 				},
-				podAnnotations: map[string]string{
+				PodAnnotations: map[string]string{
 					"deploy.type": "prod",
 				},
 			},
@@ -346,7 +346,7 @@ func TestWatcherKubeEnricherWithMultiPIDContainers(t *testing.T) {
 
 	// Test delete of pids, ensuring we don't delete the whole containerProcessMapping
 	wk.enrichProcessEvent([]Event[ProcessAttrs]{
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 1}},
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 1}},
 	})
 
 	events = testutil.ReadChannel(t, outputCh, timeout)
@@ -364,7 +364,7 @@ func TestWatcherKubeEnricherWithMultiPIDContainers(t *testing.T) {
 
 	// Let's delete the other process inside the container, the map should be cleaned up fully
 	wk.enrichProcessEvent([]Event[ProcessAttrs]{
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 2}},
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 2}},
 	})
 
 	events = testutil.ReadChannel(t, outputCh, timeout)
@@ -380,7 +380,7 @@ func TestWatcherKubeEnricherWithMultiPIDContainers(t *testing.T) {
 func newProcess(input *msg.Queue[[]Event[ProcessAttrs]], pid PID, ports []uint32) {
 	input.Send([]Event[ProcessAttrs]{{
 		Type: EventCreated,
-		Obj:  ProcessAttrs{pid: pid, openPorts: ports},
+		Obj:  ProcessAttrs{Pid: pid, OpenPorts: ports},
 	}})
 }
 
@@ -424,9 +424,9 @@ func fakeContainerInfo(pid uint32) (container.Info, error) {
 
 func fakeProcessInfo(pp ProcessAttrs) (*services.ProcessInfo, error) {
 	return &services.ProcessInfo{
-		Pid:       int32(pp.pid),
-		OpenPorts: pp.openPorts,
-		ExePath:   fmt.Sprintf("/bin/process%d", pp.pid),
+		Pid:       int32(pp.Pid),
+		OpenPorts: pp.OpenPorts,
+		ExePath:   fmt.Sprintf("/bin/process%d", pp.Pid),
 	}, nil
 }
 

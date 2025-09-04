@@ -46,31 +46,23 @@ type Event[T any] struct {
 type PID int32
 
 type ProcessAttrs struct {
-	pid            PID
-	openPorts      []uint32
-	metadata       map[string]string
-	podLabels      map[string]string
-	podAnnotations map[string]string
-	processAge     time.Duration
+	Pid            PID
+	OpenPorts      []uint32
+	Metadata       map[string]string
+	PodLabels      map[string]string
+	PodAnnotations map[string]string
+	ProcessAge     time.Duration
 }
 
 func NewProcessAttrs(pid PID, openPorts []uint32, processAge time.Duration) ProcessAttrs {
 	return ProcessAttrs{
-		pid:            pid,
-		openPorts:      openPorts,
-		metadata:       make(map[string]string),
-		podLabels:      make(map[string]string),
-		podAnnotations: make(map[string]string),
-		processAge:     processAge,
+		Pid:            pid,
+		OpenPorts:      openPorts,
+		Metadata:       make(map[string]string),
+		PodLabels:      make(map[string]string),
+		PodAnnotations: make(map[string]string),
+		ProcessAge:     processAge,
 	}
-}
-
-func (p *ProcessAttrs) Pid() PID {
-	return p.pid
-}
-
-func (p *ProcessAttrs) Metadata() map[string]string {
-	return p.metadata
 }
 
 func wplog() *slog.Logger {
@@ -232,13 +224,13 @@ func (pa *pollAccounter) watchForProcessEvents(ctx context.Context, log *slog.Lo
 }
 
 func (pa *pollAccounter) processTooNew(proc ProcessAttrs) bool {
-	_, existingProcess := pa.pids[proc.pid]
+	_, existingProcess := pa.pids[proc.Pid]
 	if existingProcess {
 		return false
 	}
 	// if we see duration of 0, it means we need to consider this process, since it was
 	// very likely forcibly scanned because of open ports event
-	return proc.processAge != time.Duration(0) && (proc.processAge < pa.cfg.Discovery.MinProcessAge)
+	return proc.ProcessAge != time.Duration(0) && (proc.ProcessAge < pa.cfg.Discovery.MinProcessAge)
 }
 
 // snapshot compares the current processes with the status of the previous poll
@@ -253,10 +245,10 @@ func (pa *pollAccounter) snapshot(fetchedProcs map[PID]ProcessAttrs) []Event[Pro
 	for pid, proc := range fetchedProcs {
 		// if the process does not have open ports, we might still notify it
 		// for example, if it's a client with ephemeral connections, which might be later matched by executable name
-		if len(proc.openPorts) == 0 {
+		if len(proc.OpenPorts) == 0 {
 			if pa.checkNewProcessNotification(pid, reportedProcs, notReadyProcs) {
 				if pa.processTooNew(proc) {
-					log.Debug("delaying process analysis, too soon", "pid", pid, "age", proc.processAge)
+					log.Debug("delaying process analysis, too soon", "pid", pid, "age", proc.ProcessAge)
 					notReadyProcs[pid] = struct{}{}
 					continue
 				}
@@ -264,7 +256,7 @@ func (pa *pollAccounter) snapshot(fetchedProcs map[PID]ProcessAttrs) []Event[Pro
 				log.Debug("process added", "pid", pid)
 			}
 		} else {
-			for _, port := range proc.openPorts {
+			for _, port := range proc.OpenPorts {
 				if pa.checkNewProcessConnectionNotification(proc, port, currentPidPorts, reportedProcs, notReadyProcs) {
 					events = append(events, Event[ProcessAttrs]{Type: EventCreated, Obj: proc})
 					log.Debug("process added", "pid", pid, "port", port)
@@ -321,18 +313,18 @@ func (pa *pollAccounter) checkNewProcessConnectionNotification(
 	currentPidPorts map[pidPort]ProcessAttrs,
 	reportedProcs, notReadyProcs map[PID]struct{},
 ) bool {
-	pp := pidPort{Pid: proc.pid, Port: port}
+	pp := pidPort{Pid: proc.Pid, Port: port}
 	currentPidPorts[pp] = proc
 	// the connection existed before iff we already had registered this pid/port pair
 	_, existingConnection := pa.pidPorts[pp]
 	// the proc existed before iff we already had registered this pid
-	_, existingProcess := pa.pids[proc.pid]
+	_, existingProcess := pa.pids[proc.Pid]
 	// we notify the creation either if the connection and the process is new...
 	if !existingConnection || !existingProcess {
 		// ...also if we haven't already reported the process in the last "snapshot" invocation
 		if _, ok := reportedProcs[pp.Pid]; !ok {
 			// avoid notifying multiple times the same process if it has multiple connections
-			reportedProcs[proc.pid] = struct{}{}
+			reportedProcs[proc.Pid] = struct{}{}
 			exec, ok := pa.executableReady(pp.Pid)
 			if ok {
 				wplog().Debug("Executable ready", "path", exec, "pid", pp.Pid, "port", port)

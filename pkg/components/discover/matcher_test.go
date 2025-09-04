@@ -53,16 +53,16 @@ func TestCriteriaMatcher(t *testing.T) {
 		exePath := map[PID]string{
 			1: "/bin/weird33", 2: "/bin/weird33", 3: "server",
 			4: "/bin/something", 5: "server", 6: "/bin/clientweird99",
-		}[pp.pid]
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: exePath, OpenPorts: pp.openPorts}, nil
+		}[pp.Pid]
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: exePath, OpenPorts: pp.OpenPorts}, nil
 	}
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1, openPorts: []uint32{1, 2, 3}}}, // pass
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 2, openPorts: []uint32{4}}},       // filter
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 3, openPorts: []uint32{8433}}},    // filter
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 4, openPorts: []uint32{8083}}},    // pass
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 5, openPorts: []uint32{443}}},     // pass
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 6}},                               // pass
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, OpenPorts: []uint32{1, 2, 3}}}, // pass
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 2, OpenPorts: []uint32{4}}},       // filter
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 3, OpenPorts: []uint32{8433}}},    // filter
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 4, OpenPorts: []uint32{8083}}},    // pass
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 5, OpenPorts: []uint32{443}}},     // pass
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 6}},                               // pass
 	})
 
 	matches := testutil.ReadChannel(t, filteredProcesses, testTimeout)
@@ -103,16 +103,16 @@ func TestCriteriaMatcher_Exclude(t *testing.T) {
 		exePath := map[PID]string{
 			1: "/bin/weird33", 2: "/bin/weird33", 3: "server",
 			4: "/bin/something", 5: "server", 6: "/bin/clientweird99",
-		}[pp.pid]
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: exePath, OpenPorts: pp.openPorts}, nil
+		}[pp.Pid]
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: exePath, OpenPorts: pp.OpenPorts}, nil
 	}
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1, openPorts: []uint32{1, 2, 3}}}, // pass
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 2, openPorts: []uint32{4}}},       // filter
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 3, openPorts: []uint32{8433}}},    // filter
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 4, openPorts: []uint32{8083}}},    // filter (in exclude)
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 5, openPorts: []uint32{443}}},     // filter (in exclude)
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 6}},                               // pass
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, OpenPorts: []uint32{1, 2, 3}}}, // pass
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 2, OpenPorts: []uint32{4}}},       // filter
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 3, OpenPorts: []uint32{8433}}},    // filter
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 4, OpenPorts: []uint32{8083}}},    // filter (in exclude)
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 5, OpenPorts: []uint32{443}}},     // filter (in exclude)
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 6}},                               // pass
 	})
 
 	matches := testutil.ReadChannel(t, filteredProcesses, testTimeout)
@@ -144,18 +144,18 @@ func TestCriteriaMatcher_Exclude_Metadata(t *testing.T) {
 		exePath := map[PID]string{
 			1: "/bin/weird33", 2: "/bin/weird33", 3: "server",
 			4: "/bin/something", 5: "server", 6: "/bin/clientweird99",
-		}[pp.pid]
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: exePath, OpenPorts: pp.openPorts}, nil
+		}[pp.Pid]
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: exePath, OpenPorts: pp.OpenPorts}, nil
 	}
 	nodeFoo := map[string]string{"k8s_node_name": "foo"}
 	nodeBar := map[string]string{"k8s_node_name": "bar"}
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1, metadata: nodeFoo}}, // pass
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 2, metadata: nodeFoo}}, // filter
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 3, metadata: nodeFoo}}, // pass
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 4, metadata: nodeBar}}, // filter (in exclude)
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 5, metadata: nodeFoo}}, // filter
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 6, metadata: nodeBar}}, // filter (in exclude)
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, Metadata: nodeFoo}}, // pass
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 2, Metadata: nodeFoo}}, // filter
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 3, Metadata: nodeFoo}}, // pass
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 4, Metadata: nodeBar}}, // filter (in exclude)
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 5, Metadata: nodeFoo}}, // filter
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 6, Metadata: nodeBar}}, // filter (in exclude)
 	})
 
 	matches := testutil.ReadChannel(t, filteredProcesses, 1000*testTimeout)
@@ -190,8 +190,8 @@ func TestCriteriaMatcher_MustMatchAllAttributes(t *testing.T) {
 		exePath := map[PID]string{
 			1: "/bin/foo", 2: "/bin/faa", 3: "foo",
 			4: "foool", 5: "thefoool", 6: "foo",
-		}[pp.pid]
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: exePath, OpenPorts: pp.openPorts}, nil
+		}[pp.Pid]
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: exePath, OpenPorts: pp.OpenPorts}, nil
 	}
 	allMeta := map[string]string{
 		"k8s_namespace":       "thens",
@@ -211,12 +211,12 @@ func TestCriteriaMatcher_MustMatchAllAttributes(t *testing.T) {
 		"k8s_replicaset_name": "thers",
 	}
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1, openPorts: []uint32{8081}, metadata: allMeta}},        // pass
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 2, openPorts: []uint32{4}, metadata: allMeta}},           // filter: executable does not match
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 3, openPorts: []uint32{7777}, metadata: allMeta}},        // filter: port does not match
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 4, openPorts: []uint32{8083}, metadata: incompleteMeta}}, // filter: not all metadata available
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 5, openPorts: []uint32{80}}},                             // filter: no metadata
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 6, openPorts: []uint32{8083}, metadata: differentMeta}},  // filter: not all metadata matches
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, OpenPorts: []uint32{8081}, Metadata: allMeta}},        // pass
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 2, OpenPorts: []uint32{4}, Metadata: allMeta}},           // filter: executable does not match
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 3, OpenPorts: []uint32{7777}, Metadata: allMeta}},        // filter: port does not match
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 4, OpenPorts: []uint32{8083}, Metadata: incompleteMeta}}, // filter: not all metadata available
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 5, OpenPorts: []uint32{80}}},                             // filter: no metadata
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 6, OpenPorts: []uint32{8083}, Metadata: differentMeta}},  // filter: not all metadata matches
 	})
 	matches := testutil.ReadChannel(t, filteredProcesses, testTimeout)
 	require.Len(t, matches, 1)
@@ -247,13 +247,13 @@ func TestCriteriaMatcherMissingPort(t *testing.T) {
 			PPid int32
 		}{
 			1: {Exe: "/bin/weird33", PPid: 0}, 2: {Exe: "/bin/weird33", PPid: 16}, 3: {Exe: "/bin/weird33", PPid: 1},
-		}[pp.pid]
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: proc.Exe, PPid: proc.PPid, OpenPorts: pp.openPorts}, nil
+		}[pp.Pid]
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: proc.Exe, PPid: proc.PPid, OpenPorts: pp.OpenPorts}, nil
 	}
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1, openPorts: []uint32{80}}}, // this one is the parent, matches on port
-		{Type: EventDeleted, Obj: ProcessAttrs{pid: 2, openPorts: []uint32{}}},   // we'll skip 2 since PPid is 16, not 1
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 3, openPorts: []uint32{}}},   // this one is the child, without port, but matches the parent by port
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, OpenPorts: []uint32{80}}}, // this one is the parent, matches on port
+		{Type: EventDeleted, Obj: ProcessAttrs{Pid: 2, OpenPorts: []uint32{}}},   // we'll skip 2 since PPid is 16, not 1
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 3, OpenPorts: []uint32{}}},   // this one is the child, without port, but matches the parent by port
 	})
 
 	matches := testutil.ReadChannel(t, filteredProcesses, testTimeout)
@@ -306,13 +306,13 @@ func TestCriteriaMatcherContainersOnly(t *testing.T) {
 			PPid int32
 		}{
 			1: {Exe: "/bin/weird33", PPid: 0}, 2: {Exe: "/bin/weird33", PPid: 0}, 3: {Exe: "/bin/weird33", PPid: 1},
-		}[pp.pid]
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: proc.Exe, PPid: proc.PPid, OpenPorts: pp.openPorts}, nil
+		}[pp.Pid]
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: proc.Exe, PPid: proc.PPid, OpenPorts: pp.OpenPorts}, nil
 	}
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 1, openPorts: []uint32{80}}}, // this one is the parent, matches on port, not in container
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 2, openPorts: []uint32{80}}}, // another pid, but in a container
-		{Type: EventCreated, Obj: ProcessAttrs{pid: 3, openPorts: []uint32{80}}}, // this one is the child, without port, but matches the parent by port, in a container
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, OpenPorts: []uint32{80}}}, // this one is the parent, matches on port, not in container
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 2, OpenPorts: []uint32{80}}}, // another pid, but in a container
+		{Type: EventCreated, Obj: ProcessAttrs{Pid: 3, OpenPorts: []uint32{80}}}, // this one is the child, without port, but matches the parent by port, in a container
 	})
 
 	matches := testutil.ReadChannel(t, filteredProcesses, 5000*testTimeout)
@@ -427,8 +427,8 @@ func TestInstrumentation_CoexistingWithDeprecatedServices(t *testing.T) {
 					2:  {Exe: "/bin/also-pass", PPid: 0},
 					11: {Exe: "/bin/dont-pass", PPid: 0},
 					12: {Exe: "/bin/neither-pass", PPid: 0},
-				}[pp.pid]
-				return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: proc.Exe, PPid: proc.PPid, OpenPorts: pp.openPorts}, nil
+				}[pp.Pid]
+				return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: proc.Exe, PPid: proc.PPid, OpenPorts: pp.OpenPorts}, nil
 			}
 			discoveredProcesses := msg.NewQueue[[]Event[ProcessAttrs]](msg.ChannelBufferLen(10))
 			filteredProcessesQu := msg.NewQueue[[]Event[ProcessMatch]](msg.ChannelBufferLen(10))
@@ -439,10 +439,10 @@ func TestInstrumentation_CoexistingWithDeprecatedServices(t *testing.T) {
 			defer filteredProcessesQu.Close()
 
 			discoveredProcesses.Send([]Event[ProcessAttrs]{
-				{Type: EventCreated, Obj: ProcessAttrs{pid: 1, openPorts: []uint32{1234}}},
-				{Type: EventCreated, Obj: ProcessAttrs{pid: 2, openPorts: []uint32{80}}},
-				{Type: EventCreated, Obj: ProcessAttrs{pid: 11, openPorts: []uint32{4321}}},
-				{Type: EventCreated, Obj: ProcessAttrs{pid: 12, openPorts: []uint32{3456}}},
+				{Type: EventCreated, Obj: ProcessAttrs{Pid: 1, OpenPorts: []uint32{1234}}},
+				{Type: EventCreated, Obj: ProcessAttrs{Pid: 2, OpenPorts: []uint32{80}}},
+				{Type: EventCreated, Obj: ProcessAttrs{Pid: 11, OpenPorts: []uint32{4321}}},
+				{Type: EventCreated, Obj: ProcessAttrs{Pid: 12, OpenPorts: []uint32{3456}}},
 			})
 
 			matches := testutil.ReadChannel(t, filteredProcesses, testTimeout)
@@ -494,17 +494,17 @@ func TestCriteriaMatcher_Granular(t *testing.T) {
 			2: "/bin/satellite-service",
 			3: "/bin/star-service",
 			4: "/bin/asteroid-service",
-		}[pp.pid]
+		}[pp.Pid]
 
-		return &services.ProcessInfo{Pid: int32(pp.pid), ExePath: exePath, OpenPorts: pp.openPorts}, nil
+		return &services.ProcessInfo{Pid: int32(pp.Pid), ExePath: exePath, OpenPorts: pp.OpenPorts}, nil
 	}
 
 	discoveredProcesses.Send([]Event[ProcessAttrs]{
 		{
 			Type: EventCreated,
 			Obj: ProcessAttrs{
-				pid: 1,
-				metadata: map[string]string{
+				Pid: 1,
+				Metadata: map[string]string{
 					"k8s_namespace":       "default",
 					"k8s_deployment_name": "planet-service",
 				},
@@ -513,8 +513,8 @@ func TestCriteriaMatcher_Granular(t *testing.T) {
 		{
 			Type: EventCreated,
 			Obj: ProcessAttrs{
-				pid: 2,
-				metadata: map[string]string{
+				Pid: 2,
+				Metadata: map[string]string{
 					"k8s_namespace":       "default",
 					"k8s_deployment_name": "satellite-service",
 				},
@@ -523,8 +523,8 @@ func TestCriteriaMatcher_Granular(t *testing.T) {
 		{
 			Type: EventCreated,
 			Obj: ProcessAttrs{
-				pid: 3,
-				metadata: map[string]string{
+				Pid: 3,
+				Metadata: map[string]string{
 					"k8s_namespace":       "default",
 					"k8s_deployment_name": "star-service",
 				},
@@ -533,8 +533,8 @@ func TestCriteriaMatcher_Granular(t *testing.T) {
 		{
 			Type: EventCreated,
 			Obj: ProcessAttrs{
-				pid: 4,
-				metadata: map[string]string{
+				Pid: 4,
+				Metadata: map[string]string{
 					"k8s_namespace":       "default",
 					"k8s_deployment_name": "asteroid-service",
 				},

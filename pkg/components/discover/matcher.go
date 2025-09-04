@@ -123,7 +123,7 @@ func (m *Matcher) matchCriteria(obj ProcessAttrs, proc *services.ProcessInfo) *P
 
 	if len(criteria) > 0 {
 		m.Log.Debug("found process", "pid", proc.Pid, "comm", proc.ExePath, "metadata",
-			obj.metadata, "podLabels", obj.podLabels, "criteria", criteria)
+			obj.Metadata, "podLabels", obj.PodLabels, "criteria", criteria)
 
 		return &ProcessMatch{Criteria: criteria, Process: proc}
 	}
@@ -132,18 +132,18 @@ func (m *Matcher) matchCriteria(obj ProcessAttrs, proc *services.ProcessInfo) *P
 }
 
 func (m *Matcher) filterCreated(obj ProcessAttrs) (Event[ProcessMatch], bool) {
-	if m.alreadyMatched(obj.pid) {
+	if m.alreadyMatched(obj.Pid) {
 		return Event[ProcessMatch]{}, false
 	}
 
 	proc, err := processInfo(obj)
 	if err != nil {
-		m.Log.Debug("can't get information for process", "pid", obj.pid, "error", err)
+		m.Log.Debug("can't get information for process", "pid", obj.Pid, "error", err)
 		return Event[ProcessMatch]{}, false
 	}
 
 	if processMatch := m.matchCriteria(obj, proc); processMatch != nil {
-		m.ProcessHistory[obj.pid] = *processMatch
+		m.ProcessHistory[obj.Pid] = *processMatch
 
 		return Event[ProcessMatch]{
 			Type: EventCreated,
@@ -153,11 +153,11 @@ func (m *Matcher) filterCreated(obj ProcessAttrs) (Event[ProcessMatch], bool) {
 
 	// We didn't match the process, but let's see if the parent PID is tracked, it might be the child hasn't opened the port yet
 	if procMatch, ok := m.ProcessHistory[PID(proc.PPid)]; ok {
-		m.Log.Debug("found process by matching the process parent id", "pid", proc.Pid, "ppid", proc.PPid, "comm", proc.ExePath, "metadata", obj.metadata)
+		m.Log.Debug("found process by matching the process parent id", "pid", proc.Pid, "ppid", proc.PPid, "comm", proc.ExePath, "metadata", obj.Metadata)
 
 		procMatch.Process = proc
 
-		m.ProcessHistory[obj.pid] = procMatch
+		m.ProcessHistory[obj.Pid] = procMatch
 
 		return Event[ProcessMatch]{
 			Type: EventCreated,
@@ -169,12 +169,12 @@ func (m *Matcher) filterCreated(obj ProcessAttrs) (Event[ProcessMatch], bool) {
 }
 
 func (m *Matcher) filterDeleted(obj ProcessAttrs) (Event[ProcessMatch], bool) {
-	procMatch, ok := m.ProcessHistory[obj.pid]
+	procMatch, ok := m.ProcessHistory[obj.Pid]
 	if !ok {
-		m.Log.Debug("deleted untracked process. Ignoring", "pid", obj.pid)
+		m.Log.Debug("deleted untracked process. Ignoring", "pid", obj.Pid)
 		return Event[ProcessMatch]{}, false
 	}
-	delete(m.ProcessHistory, obj.pid)
+	delete(m.ProcessHistory, obj.Pid)
 	m.Log.Debug("stopped process", "pid", procMatch.Process.Pid, "comm", procMatch.Process.ExePath)
 	return Event[ProcessMatch]{
 		Type: EventDeleted,
@@ -194,7 +194,7 @@ func (m *Matcher) isExcluded(obj *ProcessAttrs, proc *services.ProcessInfo) bool
 
 func (m *Matcher) matchProcess(obj *ProcessAttrs, p *services.ProcessInfo, a services.Selector) bool {
 	log := m.Log.With("pid", p.Pid, "exe", p.ExePath)
-	if !a.GetPath().IsSet() && a.GetOpenPorts().Len() == 0 && len(obj.metadata) == 0 {
+	if !a.GetPath().IsSet() && a.GetOpenPorts().Len() == 0 && len(obj.Metadata) == 0 {
 		log.Debug("no Kube metadata, no local selection criteria. Ignoring")
 		return false
 	}
@@ -243,10 +243,10 @@ func (m *Matcher) matchByAttributes(actual *ProcessAttrs, required services.Sele
 	if actual == nil {
 		return false
 	}
-	log := m.Log.With("pid", actual.pid)
+	log := m.Log.With("pid", actual.Pid)
 	// match metadata
 	for attrName, criteriaRegexp := range required.RangeMetadata() {
-		if attrValue, ok := actual.metadata[attrName]; !ok || !criteriaRegexp.MatchString(attrValue) {
+		if attrValue, ok := actual.Metadata[attrName]; !ok || !criteriaRegexp.MatchString(attrValue) {
 			log.Debug("metadata does not match", "attr", attrName, "value", attrValue)
 			return false
 		}
@@ -254,7 +254,7 @@ func (m *Matcher) matchByAttributes(actual *ProcessAttrs, required services.Sele
 
 	// match pod labels
 	for labelName, criteriaRegexp := range required.RangePodLabels() {
-		if actualPodLabelValue, ok := actual.podLabels[labelName]; !ok || !criteriaRegexp.MatchString(actualPodLabelValue) {
+		if actualPodLabelValue, ok := actual.PodLabels[labelName]; !ok || !criteriaRegexp.MatchString(actualPodLabelValue) {
 			log.Debug("pod label does not match", "label", labelName, "value", actualPodLabelValue)
 			return false
 		}
@@ -262,7 +262,7 @@ func (m *Matcher) matchByAttributes(actual *ProcessAttrs, required services.Sele
 
 	// match pod annotations
 	for annotationName, criteriaRegexp := range required.RangePodAnnotations() {
-		if actualPodAnnotationValue, ok := actual.podAnnotations[annotationName]; !ok || !criteriaRegexp.MatchString(actualPodAnnotationValue) {
+		if actualPodAnnotationValue, ok := actual.PodAnnotations[annotationName]; !ok || !criteriaRegexp.MatchString(actualPodAnnotationValue) {
 			log.Debug("pod annotation does not match", "annotation", annotationName, "value", actualPodAnnotationValue)
 			return false
 		}
@@ -425,7 +425,7 @@ func logDeprecationAndConflicts(cfg *obi.Config) {
 
 // replaceable function to allow unit tests with faked processes
 var processInfo = func(pp ProcessAttrs) (*services.ProcessInfo, error) {
-	proc, err := process.NewProcess(int32(pp.pid))
+	proc, err := process.NewProcess(int32(pp.Pid))
 	if err != nil {
 		return nil, fmt.Errorf("can't read process: %w", err)
 	}
@@ -444,6 +444,6 @@ var processInfo = func(pp ProcessAttrs) (*services.ProcessInfo, error) {
 		Pid:       proc.Pid,
 		PPid:      ppid,
 		ExePath:   exePath,
-		OpenPorts: pp.openPorts,
+		OpenPorts: pp.OpenPorts,
 	}, nil
 }

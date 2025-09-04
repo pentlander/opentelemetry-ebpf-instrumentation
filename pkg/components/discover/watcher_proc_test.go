@@ -25,12 +25,12 @@ const testTimeout = 5 * time.Second
 
 func TestWatcher_Poll(t *testing.T) {
 	// mocking a fake listProcesses method
-	p1_1 := ProcessAttrs{pid: 1, openPorts: []uint32{3030}}
-	p1_2 := ProcessAttrs{pid: 1, openPorts: []uint32{3030, 3031}}
-	p2 := ProcessAttrs{pid: 2, openPorts: []uint32{123}}
-	p3 := ProcessAttrs{pid: 3, openPorts: []uint32{456}}
-	p4 := ProcessAttrs{pid: 4, openPorts: []uint32{789}}
-	p5 := ProcessAttrs{pid: 10}
+	p1_1 := ProcessAttrs{Pid: 1, OpenPorts: []uint32{3030}}
+	p1_2 := ProcessAttrs{Pid: 1, OpenPorts: []uint32{3030, 3031}}
+	p2 := ProcessAttrs{Pid: 2, OpenPorts: []uint32{123}}
+	p3 := ProcessAttrs{Pid: 3, OpenPorts: []uint32{456}}
+	p4 := ProcessAttrs{Pid: 4, OpenPorts: []uint32{789}}
+	p5 := ProcessAttrs{Pid: 10}
 	invocation := 0
 	ctx, cancel := context.WithCancel(t.Context())
 	// GIVEN a pollAccounter
@@ -42,15 +42,15 @@ func TestWatcher_Poll(t *testing.T) {
 			invocation++
 			switch invocation {
 			case 1:
-				return map[PID]ProcessAttrs{p1_1.pid: p1_1, p2.pid: p2, p3.pid: p3}, nil
+				return map[PID]ProcessAttrs{p1_1.Pid: p1_1, p2.Pid: p2, p3.Pid: p3}, nil
 			case 2:
 				// p1_2 simulates that a new connection has been created for an existing process
-				return map[PID]ProcessAttrs{p1_2.pid: p1_2, p3.pid: p3, p4.pid: p4}, nil
+				return map[PID]ProcessAttrs{p1_2.Pid: p1_2, p3.Pid: p3, p4.Pid: p4}, nil
 			case 3:
-				return map[PID]ProcessAttrs{p2.pid: p2, p3.pid: p3, p4.pid: p4}, nil
+				return map[PID]ProcessAttrs{p2.Pid: p2, p3.Pid: p3, p4.Pid: p4}, nil
 			default:
 				// new processes with no connections (p5) should be also reported
-				return map[PID]ProcessAttrs{p5.pid: p5, p2.pid: p2, p3.pid: p3, p4.pid: p4}, nil
+				return map[PID]ProcessAttrs{p5.Pid: p5, p2.Pid: p2, p3.Pid: p3, p4.Pid: p4}, nil
 			}
 		},
 		executableReady: func(PID) (string, bool) {
@@ -124,18 +124,18 @@ func TestWatcher_Poll(t *testing.T) {
 
 func TestProcessNotReady(t *testing.T) {
 	// mocking a fake listProcesses method
-	p1 := ProcessAttrs{pid: 1, openPorts: []uint32{3030, 3031}}
-	p2 := ProcessAttrs{pid: 2, openPorts: []uint32{123}}
-	p3 := ProcessAttrs{pid: 3, openPorts: []uint32{456}}
-	p4 := ProcessAttrs{pid: 4, openPorts: []uint32{789}}
-	p5 := ProcessAttrs{pid: 10}
+	p1 := ProcessAttrs{Pid: 1, OpenPorts: []uint32{3030, 3031}}
+	p2 := ProcessAttrs{Pid: 2, OpenPorts: []uint32{123}}
+	p3 := ProcessAttrs{Pid: 3, OpenPorts: []uint32{456}}
+	p4 := ProcessAttrs{Pid: 4, OpenPorts: []uint32{789}}
+	p5 := ProcessAttrs{Pid: 10}
 
 	acc := pollAccounter{
 		interval: time.Microsecond,
 		cfg:      &obi.Config{},
 		pidPorts: map[pidPort]ProcessAttrs{},
 		listProcesses: func(bool) (map[PID]ProcessAttrs, error) {
-			return map[PID]ProcessAttrs{p1.pid: p1, p5.pid: p5, p2.pid: p2, p3.pid: p3, p4.pid: p4}, nil
+			return map[PID]ProcessAttrs{p1.Pid: p1, p5.Pid: p5, p2.Pid: p2, p3.Pid: p3, p4.Pid: p4}, nil
 		},
 		executableReady: func(pid PID) (string, bool) {
 			return "", pid >= 3
@@ -252,7 +252,7 @@ func TestPortsFetchRequired(t *testing.T) {
 // auxiliary function just to allow comparing slices whose order is not deterministic
 func sort(events []Event[ProcessAttrs]) []Event[ProcessAttrs] {
 	slices.SortFunc(events, func(a, b Event[ProcessAttrs]) int {
-		return int(a.Obj.pid) - int(b.Obj.pid)
+		return int(a.Obj.Pid) - int(b.Obj.Pid)
 	})
 	return events
 }
