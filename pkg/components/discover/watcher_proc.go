@@ -54,6 +54,17 @@ type ProcessAttrs struct {
 	processAge     time.Duration
 }
 
+func NewProcessAttrs(pid PID, openPorts []uint32, processAge time.Duration) ProcessAttrs {
+	return ProcessAttrs{
+		pid:            pid,
+		openPorts:      openPorts,
+		metadata:       make(map[string]string),
+		podLabels:      make(map[string]string),
+		podAnnotations: make(map[string]string),
+		processAge:     processAge,
+	}
+}
+
 func (p *ProcessAttrs) Pid() PID {
 	return p.pid
 }
@@ -385,7 +396,7 @@ func fetchProcessPorts(scanPorts bool) (map[PID]ProcessAttrs, error) {
 
 	for _, pid := range pids {
 		if !scanPorts {
-			processes[PID(pid)] = ProcessAttrs{pid: PID(pid), openPorts: []uint32{}, processAge: processAgeFunc(pid)}
+			processes[PID(pid)] = NewProcessAttrs(PID(pid), []uint32{}, processAgeFunc(pid))
 			continue
 		}
 		conns, err := net.ConnectionsPid("inet", pid)
@@ -398,7 +409,7 @@ func fetchProcessPorts(scanPorts bool) (map[PID]ProcessAttrs, error) {
 		for _, conn := range conns {
 			openPorts = append(openPorts, conn.Laddr.Port)
 		}
-		processes[PID(pid)] = ProcessAttrs{pid: PID(pid), openPorts: openPorts, processAge: time.Duration(0)}
+		processes[PID(pid)] = NewProcessAttrs(PID(pid), openPorts, time.Duration(0))
 	}
 	return processes, nil
 }
